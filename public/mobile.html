@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Home CCTV - Movil</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --bg: #0a0a0a;
+      --bg2: #111;
+      --bg3: #1a1a1a;
+      --border: #333;
+      --accent: #00d4ff;
+      --danger: #ff4444;
+      --success: #44ff44;
+      --warning: #ffaa00;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: #fff;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    /* ===== LOGIN ===== */
+    #login {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 30px 20px;
+    }
+
+    #login h1 { font-size: 2em; color: var(--accent); margin-bottom: 8px; }
+    #login p { color: #666; margin-bottom: 30px; font-size: 14px; }
+    
+    .input-group {
+      width: 100%;
+      max-width: 320px;
+      position: relative;
+      margin-bottom: 12px;
+    }
+    
+    .input-group input {
+      width: 100%;
+      padding: 16px;
+      padding-right: 50px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg3);
+      color: #fff;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    
+    .input-group input:focus {
+      border-color: var(--accent);
+    }
+    
+    .input-group .toggle-pass {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 8px;
+    }
+    
+    .input-group .toggle-pass:hover { color: #aaa; }
+
+    #login-btn {
+      width: 100%;
+      max-width: 320px;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #000;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.2s;
+    }
+    
+    #login-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .login-status {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #666;
+      min-height: 20px;
+    }
+    
+    .login-status.error { color: var(--danger); }
+    .login-status.success { color: var(--success); }
+
+    /* ===== APP ===== */
+    #app { display: none; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+
+    /* Tab Bar */
+    .tabbar {
+      display: flex;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .tabbar button {
+      flex: 1;
+      padding: 10px 0 8px;
+      border: none;
+      background: none;
+      color: #666;
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .tabbar button.active { color: var(--accent); }
+    .tabbar button .icon { font-size: 20px; }
+
+    /* Pages */
+    .page {
+      display: none;
+      flex: 1;
+      padding-bottom: 70px;
+      overflow-y: auto;
+    }
+    .page.active { display: flex; flex-direction: column; }
+
+    /* ===== CAMERA PAGE ===== */
+    #page-camera .camera-feed {
+      flex: 1;
+      position: relative;
+      background: #000;
+      min-height: 60vh;
+    }
+    #page-camera .camera-feed video {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    #page-camera .camera-feed .overlay {
+      position: absolute; top: 10px; left: 10px; right: 10px;
+      display: flex; justify-content: space-between;
+      pointer-events: none;
+    }
+    .badge {
+      padding: 4px 10px; border-radius: 15px;
+      font-size: 11px; font-weight: bold; display: none;
+    }
+    .badge.rec { background: var(--danger); color: #fff; animation: blink 1s infinite; }
+    .badge.rec.active, .badge.motion.active { display: flex; align-items: center; gap: 4px; }
+    .badge.motion { background: rgba(255,68,68,0.9); color: #fff; }
+
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+    .camera-controls {
+      display: flex; justify-content: center; gap: 16px;
+      padding: 15px; background: var(--bg2);
+    }
+    .camera-controls button {
+      width: 56px; height: 56px; border: none; border-radius: 50%;
+      background: var(--bg3); color: #fff; font-size: 22px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .camera-controls button.active { background: var(--accent); color: #000; }
+
+    .cam-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 15px; background: var(--bg2);
+    }
+    .cam-header .status { display: flex; align-items: center; gap: 8px; }
+    .cam-header .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--danger);
+    }
+    .cam-header .dot.online { background: var(--success); animation: pulse 2s infinite; }
+    .cam-header .name { font-size: 13px; color: #aaa; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+    /* ===== MONITOR PAGE ===== */
+    .monitor-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 8px;
+    }
+    .monitor-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .monitor-card .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; background: var(--bg2);
+    }
+    .monitor-card .card-header .info { display: flex; align-items: center; gap: 8px; }
+    .monitor-card .card-header .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--danger);
+    }
+    .monitor-card .card-header .dot.online { background: var(--success); }
+    .monitor-card .card-header .cam-name { font-size: 12px; }
+    .monitor-card .card-header .btn-connect {
+      padding: 6px 12px; border: none; border-radius: 6px;
+      background: var(--accent); color: #000; font-size: 11px;
+      font-weight: bold; cursor: pointer;
+    }
+    .monitor-card .card-header .btn-connect.connected {
+      background: var(--bg3); color: var(--accent); border: 1px solid var(--accent);
+    }
+    .monitor-card .video-box {
+      aspect-ratio: 16/9; background: #000; position: relative;
+    }
+    .monitor-card .video-box video { width: 100%; height: 100%; object-fit: cover; }
+    .monitor-card .video-box .no-signal {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      color: #444; font-size: 12px; text-align: center;
+    }
+    .monitor-card .card-actions {
+      display: flex; gap: 6px; padding: 6px 12px;
+      background: var(--bg2); border-top: 1px solid var(--border);
+    }
+    .monitor-card .card-actions button {
+      flex: 1; padding: 8px; border: none; border-radius: 6px;
+      background: var(--bg3); color: #fff; font-size: 11px; cursor: pointer;
+    }
+    .monitor-card .card-actions button.active { background: var(--accent); color: #000; }
+
+    .no-cameras {
+      text-align: center; color: #444; padding: 60px 20px;
+    }
+
+    /* ===== EVENTS PAGE ===== */
+    .event-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 15px; border-bottom: 1px solid var(--border);
+    }
+    .event-item .time { font-size: 11px; color: #666; min-width: 90px; }
+    .event-item .cam { font-size: 12px; color: var(--accent); }
+    .event-item .level {
+      padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold;
+    }
+    .event-item .level.high { background: rgba(255,68,68,0.2); color: var(--danger); }
+    .event-item .level.medium { background: rgba(255,170,0,0.2); color: var(--warning); }
+    .event-item .level.low { background: rgba(0,212,255,0.2); color: var(--accent); }
+    .event-item .thumb { width: 50px; height: 35px; border-radius: 4px; object-fit: cover; background: #000; }
+
+    /* Toast */
+    .toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--accent); color: #000; padding: 10px 20px;
+      border-radius: 25px; font-size: 13px; font-weight: bold;
+      z-index: 200; display: none;
+    }
+    .toast.active { display: block; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity:0; transform: translateX(-50%) translateY(-10px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+
+    /* Intercom indicator */
+    .intercom-active {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,165,0,0.9); color: #000; padding: 8px 16px;
+      border-radius: 20px; font-size: 12px; font-weight: bold;
+      display: none; z-index: 150;
+    }
+    .intercom-active.active { display: flex; align-items: center; gap: 8px; }
+  </style>
+</head>
+<body>
+  <!-- Login -->
+  <div id="login">
+    <h1>Home CCTV</h1>
+    <p>Camara y Monitor en tu telefono</p>
+    
+    <div class="input-group">
+      <input type="text" id="device-name" placeholder="Nombre (ej: Sala, Porton)" autocomplete="off">
+    </div>
+    
+    <div class="input-group">
+      <input type="password" id="access-key" placeholder="Clave de acceso" autocomplete="off">
+      <button class="toggle-pass" onclick="togglePassword()" id="eye-btn">Mostrar</button>
+    </div>
+    
+    <button id="login-btn" onclick="doLogin()">Conectar</button>
+    
+    <div class="login-status" id="login-status"></div>
+  </div>
+
+  <!-- App -->
+  <div id="app">
+    <!-- CAMERA PAGE -->
+    <div id="page-camera" class="page active">
+      <div class="cam-header">
+        <div class="status">
+          <div class="dot" id="cam-dot"></div>
+          <span class="name" id="cam-name-label">-</span>
+        </div>
+        <span style="font-size:12px;color:#444;" id="cam-mode-label">CAMARA</span>
+      </div>
+      <div class="camera-feed">
+        <video id="local-video" autoplay playsinline muted></video>
+        <div class="overlay">
+          <div class="badge rec" id="rec-badge">REC</div>
+          <div class="badge motion" id="motion-badge">MOV</div>
+        </div>
+      </div>
+      <div class="camera-controls">
+        <button onclick="flipCamera()" title="Cambiar camara">Rotar</button>
+        <button id="btn-night" onclick="toggleNight()" title="Vision nocturna">IR</button>
+        <button id="btn-rec" onclick="toggleRec()" title="Grabar">Grab</button>
+        <button id="btn-mic" onclick="toggleMic()" title="Microfono">Mic</button>
+        <button id="btn-motion" onclick="toggleMotion()" title="Movimiento">Mov</button>
+      </div>
+    </div>
+
+    <!-- MONITOR PAGE -->
+    <div id="page-monitor" class="page">
+      <div style="padding:10px 15px;background:var(--bg2);display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:14px;font-weight:500;">Monitor</span>
+        <span style="font-size:12px;color:#444;" id="monitor-count">0 camaras</span>
+      </div>
+      <div class="monitor-grid" id="monitor-grid">
+        <div class="no-cameras">Esperando camaras...</div>
+      </div>
+    </div>
+
+    <!-- EVENTS PAGE -->
+    <div id="page-events" class="page">
+      <div style="padding:10px 15px;background:var(--bg2);">
+        <span style="font-size:14px;font-weight:500;">Eventos</span>
+      </div>
+      <div id="events-list"></div>
+    </div>
+
+    <!-- TAB BAR -->
+    <div class="tabbar">
+      <button class="active" onclick="showPage('camera')">
+        <span class="icon">Cam</span>Camara
+      </button>
+      <button onclick="showPage('monitor')">
+        <span class="icon">Mon</span>Monitor
+      </button>
+      <button onclick="showPage('events')">
+        <span class="icon">Evt</span>Eventos
+      </button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div class="intercom-active" id="intercom-indicator">Intercom activo</div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let socket = null;
+    let cameraId = null;
+    let localStream = null;
+    let facingMode = 'environment';
+    let isRec = false;
+    let isMicOn = true;
+    let isNightOn = false;
+    let isMotionOn = true;
+    let mediaRecorder = null;
+    let motionInterval = null;
+    let prevFrame = null;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    // Monitor state
+    const peerConns = new Map();
+    const cameraMap = new Map();
+    let intercomTarget = null;
+
+    const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+    // === PASSWORD TOGGLE ===
+    function togglePassword() {
+      const input = document.getElementById('access-key');
+      const btn = document.getElementById('eye-btn');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = 'Ocultar';
+      } else {
+        input.type = 'password';
+        btn.textContent = 'Mostrar';
+      }
+    }
+
+    // === ENTER KEY SUPPORT ===
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && document.getElementById('login').style.display !== 'none') {
+        doLogin();
+      }
+    });
+
+    // === LOGIN ===
+    function doLogin() {
+      const name = document.getElementById('device-name').value.trim();
+      const key = document.getElementById('access-key').value.trim();
+      const status = document.getElementById('login-status');
+      const btn = document.getElementById('login-btn');
+      
+      if (!name) {
+        status.textContent = 'Escribe un nombre para el dispositivo';
+        status.className = 'login-status error';
+        document.getElementById('device-name').focus();
+        return;
+      }
+      
+      if (!key) {
+        status.textContent = 'Escribe la clave de acceso';
+        status.className = 'login-status error';
+        document.getElementById('access-key').focus();
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Conectando...';
+      status.textContent = 'Conectando al servidor...';
+      status.className = 'login-status';
+
+      // Create socket connection
+      socket = io({ 
+        auth: { key: key },
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
+      });
+
+      socket.on('connect', () => {
+        status.textContent = 'Conectado! Registrando camara...';
+        status.className = 'login-status success';
+        socket.emit('camera:register', { name: name });
+      });
+
+      socket.on('connect_error', (err) => {
+        status.textContent = 'Error: ' + err.message;
+        status.className = 'login-status error';
+        btn.disabled = false;
+        btn.textContent = 'Conectar';
+      });
+
+      socket.on('camera:registered', (data) => {
+        cameraId = data.cameraId;
+        document.getElementById('cam-name-label').textContent = data.name;
+        document.getElementById('cam-dot').classList.add('online');
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        startCamera();
+        showToast('Conectado: ' + data.name);
+      });
+
+      // Monitor: receive camera list
+      socket.on('cameras:list', (list) => {
+        list.forEach(cam => {
+          if (cam.id !== cameraId && cam.status === 'online') {
+            cameraMap.set(cam.id, cam);
+          }
+        });
+        renderMonitors();
+      });
+
+      socket.on('camera:online', (cam) => {
+        if (cam.id !== cameraId) {
+          cameraMap.set(cam.id, cam);
+          renderMonitors();
+        }
+      });
+
+      socket.on('camera:offline', (data) => {
+        const cam = cameraMap.get(data.cameraId);
+        if (cam) { cam.status = 'offline'; renderMonitors(); }
+      });
+
+      socket.on('camera:removed', (data) => {
+        cameraMap.delete(data.cameraId);
+        const pc = peerConns.get(data.cameraId);
+        if (pc) pc.close();
+        peerConns.delete(data.cameraId);
+        renderMonitors();
+      });
+
+      // WebRTC signaling
+      socket.on('signal:offer', async (data) => {
+        await handleOffer(data);
+      });
+
+      socket.on('signal:answer', async (data) => {
+        for (const [camId, pc] of peerConns) {
+          if (pc._targetSocket === data.fromSocketId) {
+            try {
+              await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+            } catch(e) { console.error('Answer error:', e); }
+          }
+        }
+      });
+
+      socket.on('signal:ice-candidate', async (data) => {
+        for (const [camId, pc] of peerConns) {
+          if (pc._targetSocket === data.fromSocketId && data.candidate) {
+            try { await pc.addIceCandidate(data.candidate); } catch(e) {}
+          }
+        }
+      });
+
+      // Intercom
+      socket.on('intercom:start', () => {
+        document.getElementById('intercom-indicator').classList.add('active');
+      });
+
+      socket.on('intercom:stop', () => {
+        document.getElementById('intercom-indicator').classList.remove('active');
+      });
+
+      socket.on('intercom:audio', (data) => {
+        playAudio(data.audio);
+      });
+
+      // Camera signals
+      socket.on('nightvision:on', () => toggleFlash(true));
+      socket.on('nightvision:off', () => toggleFlash(false));
+      socket.on('recording:start', () => { if (!isRec) toggleRec(); });
+      socket.on('recording:stop', () => { if (isRec) toggleRec(); });
+      socket.on('message:receive', (data) => showToast(data.text));
+
+      socket.on('motion:detected', (event) => {
+        addEvent(event);
+        const card = document.getElementById('mon-' + event.cameraId);
+        if (card) {
+          const badge = card.querySelector('.motion-badge');
+          if (badge) { badge.classList.add('active'); setTimeout(() => badge.classList.remove('active'), 2000); }
+        }
+      });
+
+      socket.on('disconnect', () => {
+        document.getElementById('cam-dot').classList.remove('online');
+        showToast('Desconectado del servidor');
+      });
+
+      socket.on('reconnect', () => {
+        document.getElementById('cam-dot').classList.add('online');
+        if (cameraId) socket.emit('camera:register', { name: name });
+        showToast('Reconectado');
+      });
+    }
+
+    // === CAMERA FUNCTIONS ===
+    async function startCamera() {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: true
+        });
+        document.getElementById('local-video').srcObject = localStream;
+        if (isMotionOn) startMotion();
+      } catch(e) {
+        console.error('Camera error:', e);
+        showToast('Error: No se pudo acceder a la camara');
+      }
+    }
+
+    async function flipCamera() {
+      facingMode = facingMode === 'environment' ? 'user' : 'environment';
+      if (localStream) localStream.getTracks().forEach(t => t.stop());
+      await startCamera();
+      showToast('Camara cambiada');
+    }
+
+    function toggleNight() {
+      isNightOn = !isNightOn;
+      document.getElementById('btn-night').classList.toggle('active', isNightOn);
+      toggleFlash(isNightOn);
+    }
+
+    async function toggleFlash(on) {
+      try {
+        if (!localStream) return;
+        const track = localStream.getVideoTracks()[0];
+        const caps = track.getCapabilities();
+        if (caps.torch) await track.applyConstraints({ advanced: [{ torch: on }] });
+      } catch(e) {}
+    }
+
+    function toggleMic() {
+      isMicOn = !isMicOn;
+      document.getElementById('btn-mic').classList.toggle('active', isMicOn);
+      if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = isMicOn);
+      showToast(isMicOn ? 'Microfono ON' : 'Microfono OFF');
+    }
+
+    function toggleMotion() {
+      isMotionOn = !isMotionOn;
+      document.getElementById('btn-motion').classList.toggle('active', isMotionOn);
+      if (isMotionOn) startMotion(); else clearInterval(motionInterval);
+    }
+
+    function toggleRec() {
+      isRec = !isRec;
+      document.getElementById('btn-rec').classList.toggle('active', isRec);
+      document.getElementById('rec-badge').classList.toggle('active', isRec);
+      if (isRec) startRec(); else stopRec();
+    }
+
+    function startRec() {
+      if (!localStream) return;
+      mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm;codecs=vp9' });
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0 && socket) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            socket.emit('recording:chunk', { cameraId: cameraId, chunk: reader.result.split(',')[1], timestamp: Date.now() });
+          };
+          reader.readAsDataURL(e.data);
+        }
+      };
+      mediaRecorder.start(5000);
+    }
+
+    function stopRec() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+      mediaRecorder = null;
+    }
+
+    // Motion Detection
+    function startMotion() {
+      if (motionInterval) clearInterval(motionInterval);
+      motionInterval = setInterval(() => {
+        if (!localStream || !isMotionOn) return;
+        try {
+          const video = document.getElementById('local-video');
+          canvas.width = video.videoWidth / 4;
+          canvas.height = video.videoHeight / 4;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          if (prevFrame) {
+            const diff = calcDiff(prevFrame, frame);
+            if (diff > 15) {
+              const level = diff > 40 ? 'high' : diff > 25 ? 'medium' : 'low';
+              document.getElementById('motion-badge').classList.add('active');
+              if (socket) socket.emit('motion:detected', { level: level, screenshot: canvas.toDataURL('image/jpeg', 0.5) });
+              setTimeout(() => document.getElementById('motion-badge').classList.remove('active'), 2000);
+            }
+          }
+          prevFrame = frame;
+        } catch(e) {}
+      }, 500);
+    }
+
+    function calcDiff(a, b) {
+      let d = 0;
+      for (let i = 0; i < a.data.length; i += 16) d += Math.abs(a.data[i] - b.data[i]);
+      return d / (a.data.length / 16);
+    }
+
+    // === MONITOR FUNCTIONS ===
+    function renderMonitors() {
+      const grid = document.getElementById('monitor-grid');
+      const cams = Array.from(cameraMap.values()).filter(c => c.id !== cameraId);
+      
+      if (cams.length === 0) {
+        grid.innerHTML = '<div class="no-cameras">Esperando camaras...</div>';
+        document.getElementById('monitor-count').textContent = '0 camaras';
+        return;
+      }
+
+      document.getElementById('monitor-count').textContent = cams.length + ' camara(s)';
+      
+      grid.innerHTML = cams.map(cam => {
+        return '<div class="monitor-card" id="mon-' + cam.id + '">' +
+          '<div class="card-header">' +
+            '<div class="info">' +
+              '<div class="dot ' + (cam.status === 'online' ? 'online' : '') + '"></div>' +
+              '<span class="cam-name">' + cam.name + '</span>' +
+            '</div>' +
+            '<button class="btn-connect" id="btn-connect-' + cam.id + '" onclick="connectToCamera(\'' + cam.id + '\')">Ver</button>' +
+          '</div>' +
+          '<div class="video-box" id="vbox-' + cam.id + '">' +
+            '<div class="no-signal">Sin conexion</div>' +
+          '</div>' +
+          '<div class="card-actions">' +
+            '<button onclick="startIntercom(\'' + cam.id + '\')">Hablar</button>' +
+            '<button onclick="takeScreenshot(\'' + cam.id + '\')">Foto</button>' +
+            '<button onclick="requestNight(\'' + cam.id + '\')">IR</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    async function connectToCamera(camId) {
+      const cam = cameraMap.get(camId);
+      if (!cam) return;
+
+      const btn = document.getElementById('btn-connect-' + camId);
+      
+      // If already connected, disconnect
+      const existingPc = peerConns.get(camId);
+      if (existingPc) {
+        existingPc.close();
+        peerConns.delete(camId);
+        const vbox = document.getElementById('vbox-' + camId);
+        vbox.innerHTML = '<div class="no-signal">Sin conexion</div>';
+        btn.textContent = 'Ver';
+        btn.classList.remove('connected');
+        return;
+      }
+
+      const pc = new RTCPeerConnection(ICE);
+      peerConns.set(camId, pc);
+      pc._targetSocket = cam.socketId;
+
+      pc.ontrack = (event) => {
+        const video = document.createElement('video');
+        video.autoplay = true;
+        video.playsInline = true;
+        video.srcObject = event.streams[0];
+        const vbox = document.getElementById('vbox-' + camId);
+        vbox.innerHTML = '';
+        vbox.appendChild(video);
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate && socket) {
+          socket.emit('signal:ice-candidate', { targetSocketId: cam.socketId, candidate: event.candidate });
+        }
+      };
+
+      pc.addTransceiver('video', { direction: 'recvonly' });
+      pc.addTransceiver('audio', { direction: 'recvonly' });
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      if (socket) socket.emit('signal:offer', { targetSocketId: cam.socketId, offer: offer });
+      
+      btn.textContent = 'Parar';
+      btn.classList.add('connected');
+    }
+
+    async function handleOffer(data) {
+      if (!localStream) return;
+      
+      const pc = new RTCPeerConnection(ICE);
+      
+      localStream.getTracks().forEach(track => {
+        pc.addTrack(track, localStream);
+      });
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate && socket) {
+          socket.emit('signal:ice-candidate', { targetSocketId: data.fromSocketId, candidate: event.candidate });
+        }
+      };
+
+      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      if (socket) socket.emit('signal:answer', { targetSocketId: data.fromSocketId, answer: answer });
+    }
+
+    // Intercom
+    function startIntercom(camId) {
+      const cam = cameraMap.get(camId);
+      if (!cam || !socket) return;
+
+      if (intercomTarget === camId) {
+        socket.emit('intercom:stop', { cameraId: camId });
+        intercomTarget = null;
+        document.getElementById('intercom-indicator').classList.remove('active');
+        return;
+      }
+
+      intercomTarget = camId;
+      socket.emit('intercom:start', { cameraId: camId });
+      document.getElementById('intercom-indicator').classList.add('active');
+    }
+
+    function playAudio(base64) {
+      try {
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        ac.decodeAudioData(bytes.buffer).then(buf => {
+          const src = ac.createBufferSource();
+          src.buffer = buf;
+          src.connect(ac.destination);
+          src.start();
+        });
+      } catch(e) {}
+    }
+
+    // Screenshot
+    function takeScreenshot(camId) {
+      const vbox = document.getElementById('vbox-' + camId);
+      const video = vbox.querySelector('video');
+      if (!video) return;
+      const c = document.createElement('canvas');
+      c.width = video.videoWidth; c.height = video.videoHeight;
+      c.getContext('2d').drawImage(video, 0, 0);
+      const a = document.createElement('a');
+      a.download = 'cam-' + camId + '-' + Date.now() + '.png';
+      a.href = c.toDataURL('image/png');
+      a.click();
+    }
+
+    // Request night vision
+    function requestNight(camId) {
+      const cam = cameraMap.get(camId);
+      if (cam && socket) socket.emit('nightvision:on', { cameraId: camId });
+    }
+
+    // Events
+    function addEvent(event) {
+      const list = document.getElementById('events-list');
+      const time = new Date(event.timestamp).toLocaleTimeString('es-ES');
+      const item = document.createElement('div');
+      item.className = 'event-item';
+      item.innerHTML = '<span class="time">' + time + '</span>' +
+        '<span class="cam">' + event.cameraName + '</span>' +
+        '<span class="level ' + event.level + '">' + event.level.toUpperCase() + '</span>';
+      list.insertBefore(item, list.firstChild);
+    }
+
+    // Navigation
+    function showPage(name) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tabbar button').forEach(b => b.classList.remove('active'));
+      document.getElementById('page-' + name).classList.add('active');
+      const tabs = ['camera', 'monitor', 'events'];
+      document.querySelectorAll('.tabbar button')[tabs.indexOf(name)].classList.add('active');
+      
+      if (name === 'monitor' && socket) {
+        socket.emit('dashboard:request-cameras');
+      }
+    }
+
+    function showToast(text) {
+      const t = document.getElementById('toast');
+      t.textContent = text;
+      t.classList.add('active');
+      setTimeout(() => t.classList.remove('active'), 2500);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Home CCTV - Cámara</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Login Screen */
+    #login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    #login-screen h1 {
+      font-size: 1.5em;
+      margin-bottom: 10px;
+      color: #00d4ff;
+    }
+
+    #login-screen p {
+      color: #888;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    #login-screen input {
+      width: 100%;
+      max-width: 300px;
+      padding: 12px 16px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    #login-screen button {
+      width: 100%;
+      max-width: 300px;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #00d4ff;
+      color: #000;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* Camera Screen */
+    #camera-screen {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .camera-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 15px;
+      background: #111;
+      border-bottom: 1px solid #222;
+      z-index: 10;
+    }
+
+    .camera-header .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .camera-header .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ff4444;
+      animation: pulse 2s infinite;
+    }
+
+    .camera-header .status-dot.online {
+      background: #44ff44;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .camera-header .name {
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    .camera-controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .camera-controls button {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 50%;
+      background: #222;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .camera-controls button.active {
+      background: #00d4ff;
+      color: #000;
+    }
+
+    .camera-view {
+      flex: 1;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .camera-view video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .camera-view .overlay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .camera-view .rec-badge {
+      display: none;
+      background: #ff0000;
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      animation: blink 1s infinite;
+    }
+
+    .camera-view .rec-badge.active {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .camera-view .motion-indicator {
+      background: rgba(255, 68, 68, 0.8);
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      display: none;
+    }
+
+    .camera-view .motion-indicator.active {
+      display: block;
+    }
+
+    /* Bottom controls */
+    .camera-bottom {
+      padding: 15px;
+      background: #111;
+      border-top: 1px solid #222;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .camera-bottom button {
+      width: 60px;
+      height: 60px;
+      border: none;
+      border-radius: 50%;
+      background: #222;
+      color: #fff;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    .camera-bottom button span {
+      font-size: 9px;
+      margin-top: 4px;
+    }
+
+    .camera-bottom button.active {
+      background: #00d4ff;
+      color: #000;
+    }
+
+    /* Message display */
+    .message-display {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 212, 255, 0.9);
+      color: #000;
+      padding: 10px 20px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: bold;
+      display: none;
+      z-index: 100;
+      max-width: 80%;
+      text-align: center;
+    }
+
+    .message-display.active {
+      display: block;
+      animation: fadeInUp 0.3s ease;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* Night vision overlay */
+    .nightvision-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 255, 0, 0.05);
+      pointer-events: none;
+      display: none;
+    }
+
+    .nightvision-overlay.active {
+      display: block;
+    }
+
+    /* Intercom indicator */
+    .intercom-indicator {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 165, 0, 0.9);
+      color: #000;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      display: none;
+    }
+
+    .intercom-indicator.active {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .intercom-indicator .wave {
+      display: flex;
+      gap: 2px;
+      align-items: center;
+    }
+
+    .intercom-indicator .wave span {
+      width: 3px;
+      height: 12px;
+      background: #000;
+      border-radius: 2px;
+      animation: wave 0.8s infinite;
+    }
+
+    .intercom-indicator .wave span:nth-child(2) { animation-delay: 0.1s; }
+    .intercom-indicator .wave span:nth-child(3) { animation-delay: 0.2s; }
+    .intercom-indicator .wave span:nth-child(4) { animation-delay: 0.3s; }
+
+    @keyframes wave {
+      0%, 100% { height: 4px; }
+      50% { height: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div id="login-screen">
+    <h1>Home CCTV</h1>
+    <p>Conecta este telefono como camara de seguridad</p>
+    <input type="text" id="camera-name" placeholder="Nombre de la camara (ej: Sala)" />
+    <div style="position:relative;width:100%;max-width:300px;">
+      <input type="password" id="access-key" placeholder="Clave de acceso" style="padding-right:70px;" />
+      <button onclick="togglePass()" id="eye-btn" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#666;cursor:pointer;font-size:14px;">Mostrar</button>
+    </div>
+    <button onclick="connectCamera()">Conectar Camara</button>
+    <div id="login-status" style="margin-top:12px;font-size:13px;color:#666;min-height:20px;"></div>
+  </div>
+
+  <!-- Camera Screen -->
+  <div id="camera-screen">
+    <div class="camera-header">
+      <div class="status">
+        <div class="status-dot" id="status-dot"></div>
+        <span class="name" id="camera-label">Cámara</span>
+      </div>
+      <div class="camera-controls">
+        <button id="btn-flip" onclick="flipCamera()" title="Cambiar cámara">🔄</button>
+      </div>
+    </div>
+
+    <div class="camera-view">
+      <video id="local-video" autoplay playsinline muted></video>
+      <div class="nightvision-overlay" id="nightvision-overlay"></div>
+      <div class="overlay">
+        <div class="rec-badge" id="rec-badge">● REC</div>
+        <div class="motion-indicator" id="motion-indicator">⚡ Movimiento</div>
+      </div>
+      <div class="intercom-indicator" id="intercom-indicator">
+        <div class="wave">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        Intercom activo
+      </div>
+    </div>
+
+    <div class="camera-bottom">
+      <button id="btn-nightvision" onclick="toggleNightVision()" title="Visión nocturna">
+        🌙<span>Noche</span>
+      </button>
+      <button id="btn-record" onclick="toggleRecording()" title="Grabar">
+        ⏺<span>Grabar</span>
+      </button>
+      <button id="btn-mute" onclick="toggleMute()" title="Silenciar micrófono">
+        🎤<span>Mic</span>
+      </button>
+      <button id="btn-motion" onclick="toggleMotionDetection()" title="Detección de movimiento">
+        👁<span>Motion</span>
+      </button>
+    </div>
+
+    <div class="message-display" id="message-display"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let socket = null;
+    let localStream = null;
+    let peerConnection = null;
+    let cameraId = null;
+    let facingMode = 'environment'; // 'environment' = back, 'user' = front
+    let isRecording = false;
+    let isMuted = false;
+    let isNightVisionOn = false;
+    let isMotionDetectionOn = true;
+    let mediaRecorder = null;
+    let motionDetectionInterval = null;
+    let previousFrame = null;
+    let canvas = document.createElement('canvas');
+    let ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    const ICE_SERVERS = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    };
+
+    // Password toggle
+    function togglePass() {
+      const input = document.getElementById('access-key');
+      const btn = document.getElementById('eye-btn');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = 'Ocultar';
+      } else {
+        input.type = 'password';
+        btn.textContent = 'Mostrar';
+      }
+    }
+
+    // Enter key support
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
+        connectCamera();
+      }
+    });
+
+    // Login
+    function connectCamera() {
+      const name = document.getElementById('camera-name').value.trim();
+      const key = document.getElementById('access-key').value.trim();
+      const status = document.getElementById('login-status');
+      
+      if (!name) {
+        status.textContent = 'Escribe un nombre para la camara';
+        status.style.color = '#ff4444';
+        document.getElementById('camera-name').focus();
+        return;
+      }
+      if (!key) {
+        status.textContent = 'Escribe la clave de acceso';
+        status.style.color = '#ff4444';
+        document.getElementById('access-key').focus();
+        return;
+      }
+
+      status.textContent = 'Conectando...';
+      status.style.color = '#888';
+
+      socket = io({
+        auth: { key: key },
+        reconnection: true,
+        reconnectionAttempts: 5
+      });
+
+      socket.on('connect', () => {
+        status.textContent = 'Conectado! Registrando...';
+        status.style.color = '#44ff44';
+        startCamera();
+      });
+
+      socket.on('connect_error', (err) => {
+        status.textContent = 'Error: ' + err.message;
+        status.style.color = '#ff4444';
+      });
+
+      socket.on('camera:registered', (data) => {
+        cameraId = data.cameraId;
+        document.getElementById('camera-label').textContent = data.name;
+        document.getElementById('status-dot').classList.add('online');
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('camera-screen').style.display = 'flex';
+        showMessage('Cámara conectada: ' + data.name);
+      });
+
+      socket.on('signal:offer', async (data) => {
+        await handleOffer(data);
+      });
+
+      socket.on('signal:ice-candidate', async (data) => {
+        if (peerConnection && data.candidate) {
+          try {
+            await peerConnection.addIceCandidate(data.candidate);
+          } catch (e) {
+            console.error('Error adding ICE candidate:', e);
+          }
+        }
+      });
+
+      socket.on('intercom:start', async (data) => {
+        document.getElementById('intercom-indicator').classList.add('active');
+        document.getElementById('intercom-indicator').dataset.fromDashboard = data.fromDashboard;
+        enableAudioPlayback();
+      });
+
+      socket.on('intercom:stop', () => {
+        document.getElementById('intercom-indicator').classList.remove('active');
+      });
+
+      socket.on('intercom:audio', async (data) => {
+        // Play audio from dashboard user
+        playIncomingAudio(data.audio);
+      });
+
+      socket.on('nightvision:on', () => {
+        toggleFlash(true);
+      });
+
+      socket.on('nightvision:off', () => {
+        toggleFlash(false);
+      });
+
+      socket.on('recording:start', () => {
+        if (!isRecording) toggleRecording();
+      });
+
+      socket.on('recording:stop', () => {
+        if (isRecording) toggleRecording();
+      });
+
+      socket.on('message:receive', (data) => {
+        showMessage(data.text);
+      });
+
+      socket.on('disconnect', () => {
+        document.getElementById('status-dot').classList.remove('online');
+        showMessage('Desconectado del servidor');
+      });
+
+      socket.connect();
+    }
+
+    async function startCamera() {
+      try {
+        const constraints = {
+          video: {
+            facingMode: facingMode,
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: true
+        };
+
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        document.getElementById('local-video').srcObject = localStream;
+
+        // Start motion detection
+        if (isMotionDetectionOn) {
+          startMotionDetection();
+        }
+      } catch (err) {
+        console.error('Error accessing camera:', err);
+        showMessage('Error: No se pudo acceder a la cámara');
+      }
+    }
+
+    async function flipCamera() {
+      facingMode = facingMode === 'environment' ? 'user' : 'environment';
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+      await startCamera();
+      showMessage('Cámara cambiada');
+    }
+
+    // WebRTC
+    async function handleOffer(data) {
+      peerConnection = new RTCPeerConnection(ICE_SERVERS);
+
+      // Add local tracks
+      localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+      });
+
+      // Handle ICE candidates
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('signal:ice-candidate', {
+            targetSocketId: data.fromSocketId,
+            candidate: event.candidate
+          });
+        }
+      };
+
+      // Set remote offer
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+
+      // Create answer
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+
+      socket.emit('signal:answer', {
+        targetSocketId: data.fromSocketId,
+        answer
+      });
+    }
+
+    // Motion Detection
+    function startMotionDetection() {
+      if (motionDetectionInterval) clearInterval(motionDetectionInterval);
+      
+      motionDetectionInterval = setInterval(() => {
+        if (!localStream || !isMotionDetectionOn) return;
+
+        const video = document.getElementById('local-video');
+        canvas.width = video.videoWidth / 4;
+        canvas.height = video.videoHeight / 4;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        if (previousFrame) {
+          const diff = calculateMotion(previousFrame, currentFrame);
+          
+          if (diff > 15) { // Threshold
+            const level = diff > 40 ? 'high' : diff > 25 ? 'medium' : 'low';
+            document.getElementById('motion-indicator').classList.add('active');
+            
+            socket.emit('motion:detected', {
+              level,
+              screenshot: canvas.toDataURL('image/jpeg', 0.5)
+            });
+
+            setTimeout(() => {
+              document.getElementById('motion-indicator').classList.remove('active');
+            }, 2000);
+          }
+        }
+
+        previousFrame = currentFrame;
+      }, 500);
+    }
+
+    function calculateMotion(prev, curr) {
+      let diff = 0;
+      const data1 = prev.data;
+      const data2 = curr.data;
+      const len = data1.length;
+      
+      for (let i = 0; i < len; i += 16) { // Sample every 4th pixel
+        diff += Math.abs(data1[i] - data2[i]);
+      }
+      
+      return diff / (len / 16);
+    }
+
+    function toggleMotionDetection() {
+      isMotionDetectionOn = !isMotionDetectionOn;
+      const btn = document.getElementById('btn-motion');
+      btn.classList.toggle('active', isMotionDetectionOn);
+      
+      if (isMotionDetectionOn) {
+        startMotionDetection();
+      } else {
+        clearInterval(motionDetectionInterval);
+      }
+      showMessage(isMotionDetectionOn ? 'Detección activada' : 'Detección desactivada');
+    }
+
+    // Recording
+    function toggleRecording() {
+      isRecording = !isRecording;
+      const btn = document.getElementById('btn-record');
+      const badge = document.getElementById('rec-badge');
+      
+      btn.classList.toggle('active', isRecording);
+      badge.classList.toggle('active', isRecording);
+
+      if (isRecording && localStream) {
+        startRecording();
+      } else {
+        stopRecording();
+      }
+    }
+
+    function startRecording() {
+      const chunks = [];
+      mediaRecorder = new MediaRecorder(localStream, {
+        mimeType: 'video/webm;codecs=vp9'
+      });
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64 = reader.result.split(',')[1];
+            socket.emit('recording:chunk', {
+              cameraId,
+              chunk: base64,
+              timestamp: Date.now()
+            });
+          };
+          reader.readAsDataURL(e.data);
+        }
+      };
+
+      mediaRecorder.start(5000); // Record in 5-second chunks
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        mediaRecorder = null;
+      }
+    }
+
+    // Night Vision (Flash LED)
+    async function toggleNightVision() {
+      isNightVisionOn = !isNightVisionOn;
+      const btn = document.getElementById('btn-nightvision');
+      const overlay = document.getElementById('nightvision-overlay');
+      
+      btn.classList.toggle('active', isNightVisionOn);
+      overlay.classList.toggle('active', isNightVisionOn);
+
+      await toggleFlash(isNightVisionOn);
+    }
+
+    async function toggleFlash(on) {
+      try {
+        if (!localStream) return;
+        const track = localStream.getVideoTracks()[0];
+        const capabilities = track.getCapabilities();
+        
+        if (capabilities.torch) {
+          await track.applyConstraints({
+            advanced: [{ torch: on }]
+          });
+        }
+      } catch (e) {
+        console.log('Flash not available:', e);
+      }
+    }
+
+    // Audio
+    function toggleMute() {
+      isMuted = !isMuted;
+      const btn = document.getElementById('btn-mute');
+      btn.classList.toggle('active', !isMuted);
+      
+      if (localStream) {
+        localStream.getAudioTracks().forEach(track => {
+          track.enabled = !isMuted;
+        });
+      }
+      showMessage(isMuted ? 'Micrófono silenciado' : 'Micrófono activado');
+    }
+
+    let audioContext = null;
+    let intercomStream = null;
+
+    async function enableAudioPlayback() {
+      // Enable audio track to allow speaking back
+      if (localStream) {
+        localStream.getAudioTracks().forEach(track => {
+          track.enabled = true;
+        });
+      }
+    }
+
+    async function playIncomingAudio(audioData) {
+      try {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        const binary = atob(audioData);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        
+        const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
+        source.start();
+      } catch (e) {
+        console.error('Error playing intercom audio:', e);
+      }
+    }
+
+    // Messages
+    function showMessage(text) {
+      const display = document.getElementById('message-display');
+      display.textContent = text;
+      display.classList.add('active');
+      setTimeout(() => display.classList.remove('active'), 3000);
+    }
+
+    // Initialize motion detection button state
+    document.getElementById('btn-motion').classList.add('active');
+  </script>
+</body>
+</html>
